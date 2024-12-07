@@ -1,0 +1,6 @@
+npm run dev
+Vite + React + TS
+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 //nwe one
+
+
+error in front
