@@ -1,48 +1,32 @@
 package scanner
 
 import (
-	"backend/config"
-	"backend/internal/markdown"
-	"fmt"
+	"os"
 	"path/filepath"
-
-	"github.com/jpoz/groq"
 )
 
-type Scanner struct {
-	client *groq.Client
-	config *config.Config
-}
-
-func NewScanner(config *config.Config) *Scanner {
-	return &Scanner{
-		client: groq.NewClient(groq.WithAPIKey(config.GroqApiKey)),
-		config: config,
-	}
-}
-
-func (s *Scanner) ScanCode(input ScanInput) ScanOutput {
-	prompt := formatPrompt(string(input.Content))
-	
-	messages := []groq.Message{
-		{Role: "user", Content: prompt},
-	}
-
-	response, err := s.client.CreateChatCompletion(groq.CompletionCreateParams{
-		Model:    "llama-3.1-70b-versatile",
-		Messages: messages,
-	})
-	
+func ScanFile(filePath string) (string, error) {
+	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return ScanOutput{Error: fmt.Errorf("scan failed: %v", err)}
+		return "", err
 	}
 
-	content := response.Choices[0].Message.Content
-	resultFile := filepath.Join("output", input.FileName+".md")
-	
-	if err := markdown.SaveMarkdown(resultFile, content); err != nil {
-		return ScanOutput{Error: fmt.Errorf("failed to save results: %v", err)}
+	return string(content), nil
+}
+
+func ScanDirectory(dirPath string) ([]string, error) {
+	var files []string
+
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() && filepath.Ext(path) == ".go" {
+			files = append(files, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	return ScanOutput{Content: content}
+	return files, nil
 }
